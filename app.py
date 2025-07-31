@@ -5,6 +5,8 @@ import time
 from bs4 import BeautifulSoup
 import requests
 import gspread
+import json
+import os
 from oauth2client.service_account import ServiceAccountCredentials
 
 # === 定数設定 ===
@@ -15,7 +17,10 @@ SHEET_NAME = "cache_UMA"
 # === Google Sheets 接続 ====
 def connect_to_gspread():
     scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
-    credentials = ServiceAccountCredentials.from_json_keyfile_name('credentials.json', scope)
+    json_str = os.environ.get("GOOGLE_CREDENTIALS_JSON")
+    json_str = json_str.replace("\\n", "\n")  # 改行を復元
+    credentials_dict = json.loads(json_str)
+    credentials = ServiceAccountCredentials.from_json_keyfile_dict(credentials_dict, scope)
     client = gspread.authorize(credentials)
     return client.open_by_key(SPREADSHEET_ID).worksheet(SHEET_NAME)
 
