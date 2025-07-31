@@ -4,14 +4,31 @@ import unicodedata
 import time
 from bs4 import BeautifulSoup
 import requests
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
 
-# === 設定 ===
+# === 定数設定 ===
 HEADERS = {"User-Agent": "Mozilla/5.0"}
+SPREADSHEET_ID = "1wMkpbOvqveVBkJSR85mpZcnKThYSEmusmsl710SaRKw"
+SHEET_NAME = "cache_UMA"
 
-# === ウマ娘血統データの読み込み ===
-umamusume_df = pd.read_csv("umamusume.csv")
-image_dict = dict(zip(umamusume_df["kettou"], umamusume_df["url"]))
-name_to_kettou = dict(zip(umamusume_df["kettou"], umamusume_df["kettou"]))
+# === Google Sheets 接続 ===
+def connect_to_gspread():
+    scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
+    credentials = ServiceAccountCredentials.from_json_keyfile_name('credentials.json', scope)
+    client = gspread.authorize(credentials)
+    return client.open_by_key(SPREADSHEET_ID).worksheet(SHEET_NAME)
+
+def load_cached_result(race_id, bloodline):
+    sheet = connect_to_gspread()
+    records = sheet.get_all_records()
+    return [r for r in records if r["race_id"] == race_id and r["ウマ娘血統"] == bloodline]
+
+def save_cached_result(rows):
+    sheet = connect_to_gspread()
+    existing = sheet.get_all_values()
+    headers = existing[0] if existing else ["馬名", "該当箇所", "競馬場", "レース", "ウマ娘血統", "race_id"]
+    sheet.append_rows([list(row.values()) for row in rows])
 
 # === 血統位置ラベル ===
 def generate_position_labels():
@@ -23,6 +40,11 @@ def generate_position_labels():
         return result
     return dfs("", 0, 5)[1:]
 POSITION_LABELS = generate_position_labels()
+
+# === ウマ娘血統データ読み込み ===
+umamusume_df = pd.read_csv("umamusume.csv")
+image_dict = dict(zip(umamusume_df["kettou"], umamusume_df["url"]))
+name_to_kettou = dict(zip(umamusume_df["kettou"], umamusume_df["kettou"]))
 
 # === 出走馬リンク取得 ===
 def get_horse_links(race_id):
@@ -80,17 +102,15 @@ def render_table_html(df):
     table_html += "</tbody></table>"
     return table_html
 
-# === UI ===
+# === Streamlit UI ===
 st.title("👧 ウマ娘逆引き血統サーチ")
 
-# === JRA開催日CSVの読み込み ===
+# JRA日付
 schedule_df = pd.read_csv("jra_2025_keibabook_schedule.csv")
 schedule_df["日付"] = pd.to_datetime(
     schedule_df["年"].astype(str) + "/" + schedule_df["月日(曜日)"].str.extract(r"(\d{2}/\d{2})")[0],
     format="%Y/%m/%d"
 )
-
-# 過去31日 + 未来7日 の開催日を表示
 today = pd.Timestamp.today()
 past_31 = today - pd.Timedelta(days=31)
 future_7 = today + pd.Timedelta(days=7)
@@ -105,10 +125,12 @@ target_kettou = name_to_kettou.get(selected_umamusume, "")
 st.image(image_dict.get(selected_umamusume, ""), width=150)
 st.markdown(f"選択したウマ娘：**{target_kettou}**")
 
-# レース情報取得
+# キャッシュ利用切替
+use_cache = st.radio("キャッシュ利用", ["キャッシュを使う", "再取得する"]) == "キャッシュを使う"
+
+# 検索実行
 selected_date_obj = pd.to_datetime(selected_date)
 selected_rows = schedule_df[schedule_df["日付"] == selected_date_obj]
-
 place_codes = {"札幌": "01", "函館": "02", "福島": "03", "新潟": "04", "東京": "05",
                "中山": "06", "中京": "07", "京都": "08", "阪神": "09", "小倉": "10"}
 
@@ -119,7 +141,6 @@ overall_progress = st.progress(0)
 
 if st.button("🔍 該当馬を検索"):
     for _, row in selected_rows.iterrows():
-        results = []
         year = row["年"]
         jj = place_codes.get(row["競馬場"], "")
         kk = f"{int(row['開催回']):02d}"
@@ -130,36 +151,54 @@ if st.button("🔍 該当馬を検索"):
         place_progress = st.progress(0)
         place_race_counter = 0
 
+        all_results = []
+
         for race_num in range(1, 13):
             race_id = f"{year}{jj}{kk}{dd}{race_num:02d}"
+
+            # キャッシュ確認
+            if use_cache:
+                cached = load_cached_result(race_id, target_kettou)
+                if cached:
+                    df = pd.DataFrame(cached)
+                    html = render_table_html(df)
+                    st.markdown(html, unsafe_allow_html=True)
+                    all_race_counter += 1
+                    place_race_counter += 1
+                    place_progress.progress(min(place_race_counter / 12, 1.0))
+                    overall_progress.progress(min(all_race_counter / total_races, 1.0))
+                    continue
+
             horse_links = get_horse_links(race_id)
-            horse_total = len(horse_links)
+            race_results = []
+
             for i, (name, link) in enumerate(horse_links.items(), 1):
-                status_text.text(f"検索中…{row['競馬場']}{race_num}R {i}/{horse_total}頭目 【{place_race_counter+1}/12レース目】")
+                status_text.text(f"検索中…{row['競馬場']}{race_num}R {i}/{len(horse_links)}頭目")
                 try:
                     pedigree = get_pedigree_with_positions(link)
                     matched = match_pedigree(pedigree, target_kettou)
                     if matched:
-                        results.append({
+                        race_results.append({
+                            "馬名": name,
+                            "該当箇所": "、".join(matched),
                             "競馬場": row["競馬場"],
                             "レース": f"{race_num}R",
-                            "馬名": name,
-                            "該当箇所": "、".join(matched)
+                            "ウマ娘血統": target_kettou,
+                            "race_id": race_id
                         })
                 except Exception as e:
                     st.error(f"{name} の照合エラー：{e}")
                 time.sleep(0.3)
 
-            place_race_counter += 1
+            if race_results:
+                df = pd.DataFrame(race_results)
+                html = render_table_html(df)
+                st.markdown(html, unsafe_allow_html=True)
+                save_cached_result(race_results)
+
             all_race_counter += 1
+            place_race_counter += 1
             place_progress.progress(min(place_race_counter / 12, 1.0))
             overall_progress.progress(min(all_race_counter / total_races, 1.0))
 
-        place_status.markdown(f"### ✅ {row['競馬場']} 競馬場の出走馬の抽出結果")
-
-        if results:
-            df = pd.DataFrame(results)
-            html = render_table_html(df)
-            st.markdown(html, unsafe_allow_html=True)
-        else:
-            st.info(f"{row['競馬場']} では該当馬なし")
+        place_status.markdown(f"### ✅ {row['競馬場']} 競馬場の出走馬の抽出完了")
