@@ -19,13 +19,12 @@ def connect_to_gspread():
     scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
     json_str = os.environ.get("GOOGLE_CREDENTIALS_JSON")
     if not json_str:
-        st.error("環境変数が設定されていません")
+        st.error("環境変数 GOOGLE_CREDENTIALS_JSON が見つかりません")
         st.stop()
 
-# ✅ ここを追加！！
-    json_str = json_str.replace("\\n", "\n")  # ←鍵として正しくパースさせる！
+    credentials_dict = json.loads(json_str)  # replace なしで読み込む
+    credentials_dict["private_key"] = credentials_dict["private_key"].replace("\\n", "\n")  # ←ここだけ変換
 
-    credentials_dict = json.loads(json_str)
     credentials = ServiceAccountCredentials.from_json_keyfile_dict(credentials_dict, scope)
     client = gspread.authorize(credentials)
     return client.open_by_key(SPREADSHEET_ID).worksheet(SHEET_NAME)
