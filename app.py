@@ -14,7 +14,7 @@ HEADERS = {"User-Agent": "Mozilla/5.0"}
 SPREADSHEET_ID = "1wMkpbOvqveVBkJSR85mpZcnKThYSEmusmsl710SaRKw"
 SHEET_NAME = "cache_UMA"
 
-# === Google Sheets 接続 ====
+# === Google Sheets 接続 ===
 def connect_to_gspread():
     scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
     json_str = os.environ.get("GOOGLE_CREDENTIALS_JSON")
