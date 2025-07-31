@@ -18,6 +18,13 @@ SHEET_NAME = "cache_UMA"
 def connect_to_gspread():
     scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
     json_str = os.environ.get("GOOGLE_CREDENTIALS_JSON")
+    if not json_str:
+        st.error("環境変数が設定されていません")
+        st.stop()
+
+# ✅ ここを追加！！
+    json_str = json_str.replace("\\n", "\n")  # ←鍵として正しくパースさせる！
+
     credentials_dict = json.loads(json_str)
     credentials = ServiceAccountCredentials.from_json_keyfile_dict(credentials_dict, scope)
     client = gspread.authorize(credentials)
