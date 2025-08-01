@@ -29,12 +29,20 @@ def connect_to_gspread():
     client = gspread.authorize(credentials)
     return client.open_by_key(SPREADSHEET_ID).worksheet(SHEET_NAME)
 
-def load_cached_result(race_id, bloodline):
+# === 全キャッシュ一括取得 ===
+@st.cache_data(show_spinner=False)
+def load_entire_cache():
     sheet = connect_to_gspread()
-    records = sheet.get_all_records()
-    results = []
+    return sheet.get_all_records()
 
-    for r in records:
+# === キャッシュ検索（既存関数を修正） ===
+def load_cached_result(race_id, bloodline, full_cache=None):
+    if full_cache is None:
+        sheet = connect_to_gspread()
+        full_cache = sheet.get_all_records()
+
+    results = []
+    for r in full_cache:
         race_id_match = str(r.get("race_id", "")).strip() == str(race_id).strip()
         bloodline_match = str(r.get("ウマ娘血統", "")).strip() == str(bloodline).strip()
         if race_id_match and bloodline_match:
@@ -47,15 +55,20 @@ def load_cached_result(race_id, bloodline):
                 "レース": r.get("レース", "")
             }
             results.append(filtered)
-
     return results
 
+# === キャッシュ保存（重複チェック付き） ===
 def save_cached_result(rows, race_id=None, bloodline=None):
     sheet = connect_to_gspread()
     headers = ["馬名", "該当箇所", "競馬場", "レース", "ウマ娘血統", "race_id"]
+    existing = sheet.get_all_records()
+
+    # すでに同じrace_id＋bloodlineの該当が存在すればスキップ
+    for r in existing:
+        if str(r.get("race_id", "")) == str(race_id) and str(r.get("ウマ娘血統", "")) == str(bloodline):
+            return  # スキップ
 
     if not rows:
-        # 該当なしキャッシュ行を保存
         dummy = {
             "馬名": "（該当なし）",
             "該当箇所": "該当なし",
@@ -68,6 +81,8 @@ def save_cached_result(rows, race_id=None, bloodline=None):
     else:
         values = [[row.get(h, "") for h in headers] for row in rows]
         sheet.append_rows(values)
+
+    time.sleep(1.2)  # API連続制限回避
 
 # === 血統位置ラベル ===
 def generate_position_labels():
