@@ -218,27 +218,28 @@ if all_results:
     if cache_mode != "キャッシュを使用する":
         save_cached_result(all_results)
 
+# === 各競馬場処理後の該当馬表示 ===
         if race_results:
             df = pd.DataFrame(race_results)
             df_show = df[["馬名", "該当箇所", "競馬場", "レース"]]  # 表示用（4列）
             html = render_table_html(df_show)
 
-            st.markdown(f"#### 🎯 {row['競馬場']} {race_num}R 該当馬", unsafe_allow_html=True)
+            st.markdown(f"#### 🎯 {place} {race_num}R 該当馬", unsafe_allow_html=True)
             st.markdown(html, unsafe_allow_html=True)
 
             save_cached_result(race_results)
             place_results.extend(race_results)
 
-            all_race_counter += 1
-            place_race_counter += 1
-            place_progress.progress(min(place_race_counter / 12, 1.0))
-            overall_progress.progress(min(all_race_counter / total_races, 1.0))
+        all_race_counter += 1
+        place_race_counter += 1
+        place_progress.progress(min(place_race_counter / 12, 1.0))
+        overall_progress.progress(min(all_race_counter / total_races, 1.0))
 
-        place_status.markdown(f"### ✅ {row['競馬場']} 競馬場の出走馬の抽出完了")
+    place_status.markdown(f"### ✅ {place} 競馬場の出走馬の抽出完了")
 
-        # === 競馬場ごとに一括表示 ===
-        if place_results:
-            st.markdown(f"### 🏇 {row['競馬場']} 競馬場の該当馬一覧")
-            df = pd.DataFrame(place_results)
-            html = render_table_html(df)
-            st.markdown(html, unsafe_allow_html=True)
+    # === 競馬場ごとに一括表示 ===
+    if place_results:
+        st.markdown(f"### 🏇 {place} 競馬場の該当馬一覧")
+        df = pd.DataFrame(place_results)
+        html = render_table_html(df[["馬名", "該当箇所", "競馬場", "レース"]])
+        st.markdown(html, unsafe_allow_html=True)
