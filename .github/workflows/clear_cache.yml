@@ -1,19 +1,13 @@
-name: Clear Cache Weekly
+name: clear_cache_test
 
 on:
-  schedule:
-    - cron: '0 11 * * 4'  # 木曜 20:00 JST
-    - cron: '0 3  * * 5'  # 金曜 12:00 JST
-    - cron: '0 3  * * 6'  # 土曜 12:00 JST
-    - cron: '0 3  * * 0'  # 日曜 12:00 JST
-
-  workflow_dispatch:  # ← 手動実行も可！
+  workflow_dispatch:
 
 jobs:
   clear:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup Python
@@ -21,12 +15,5 @@ jobs:
         with:
           python-version: 3.10
 
-      - name: Install Python dependencies
-        run: |
-          pip install gspread oauth2client
-
-      - name: Run clear_cache.py
-        env:
-          GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
-        run: |
-          python clear_cache.py
+      - name: Show Python version
+        run: python --version
