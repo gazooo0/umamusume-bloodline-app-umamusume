@@ -33,11 +33,13 @@ def load_cached_result(race_id, bloodline):
     sheet = connect_to_gspread()
     records = sheet.get_all_records()
     results = []
+
     for r in records:
         race_id_match = str(r.get("race_id", "")).strip() == str(race_id).strip()
         bloodline_match = str(r.get("ウマ娘血統", "")).strip() == str(bloodline).strip()
         if race_id_match and bloodline_match:
-            # 表示に使わない項目を除外
+            if r.get("該当箇所", "") == "該当なし":
+                return "該当なし"
             filtered = {
                 "馬名": r.get("馬名", ""),
                 "該当箇所": r.get("該当箇所", ""),
@@ -45,13 +47,27 @@ def load_cached_result(race_id, bloodline):
                 "レース": r.get("レース", "")
             }
             results.append(filtered)
+
     return results
 
-def save_cached_result(rows):
+def save_cached_result(rows, race_id=None, bloodline=None):
     sheet = connect_to_gspread()
     headers = ["馬名", "該当箇所", "競馬場", "レース", "ウマ娘血統", "race_id"]
-    values = [[row.get(h, "") for h in headers] for row in rows]
-    sheet.append_rows(values)
+
+    if not rows:
+        # 該当なしキャッシュ行を保存
+        dummy = {
+            "馬名": "（該当なし）",
+            "該当箇所": "該当なし",
+            "競馬場": "",
+            "レース": "",
+            "ウマ娘血統": bloodline or "",
+            "race_id": race_id or ""
+        }
+        sheet.append_row([dummy[h] for h in headers])
+    else:
+        values = [[row.get(h, "") for h in headers] for row in rows]
+        sheet.append_rows(values)
 
 # === 血統位置ラベル ===
 def generate_position_labels():
@@ -184,9 +200,19 @@ if st.button("🔍 該当馬を検索"):
 
             if use_cache:
                 cached = load_cached_result(race_id, target_kettou)
-                if cached:
+                if cached == "該当なし":
+                    place_race_counter += 1
+                    all_race_counter += 1
+                    place_progress.progress(min(place_race_counter / 12, 1.0))
+                    overall_progress.progress(min(all_race_counter / total_races, 1.0))
+                    continue
+                elif cached:
                     all_results.extend(cached)
                     place_results.extend(cached)
+                    place_race_counter += 1
+                    all_race_counter += 1
+                    place_progress.progress(min(place_race_counter / 12, 1.0))
+                    overall_progress.progress(min(all_race_counter / total_races, 1.0))
                     continue
 
             horse_links = get_horse_links(race_id)
@@ -215,6 +241,8 @@ if st.button("🔍 該当馬を検索"):
                 save_cached_result(race_results)
                 place_results.extend(race_results)
                 all_results.extend(race_results)
+            else:
+                save_cached_result([], race_id=race_id, bloodline=target_kettou)
 
             place_race_counter += 1
             all_race_counter += 1
