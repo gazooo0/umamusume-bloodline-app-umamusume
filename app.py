@@ -32,7 +32,20 @@ def connect_to_gspread():
 def load_cached_result(race_id, bloodline):
     sheet = connect_to_gspread()
     records = sheet.get_all_records()
-    return [r for r in records if r["race_id"] == race_id and r["ウマ娘血統"] == bloodline]
+    results = []
+    for r in records:
+        race_id_match = str(r.get("race_id", "")).strip() == str(race_id).strip()
+        bloodline_match = str(r.get("ウマ娘血統", "")).strip() == str(bloodline).strip()
+        if race_id_match and bloodline_match:
+            # 表示に使わない項目を除外
+            filtered = {
+                "馬名": r.get("馬名", ""),
+                "該当箇所": r.get("該当箇所", ""),
+                "競馬場": r.get("競馬場", ""),
+                "レース": r.get("レース", "")
+            }
+            results.append(filtered)
+    return results
 
 def save_cached_result(rows):
     sheet = connect_to_gspread()
