@@ -67,11 +67,18 @@ def save_cached_result(rows, race_id=None, bloodline=None):
     headers = ["馬名", "該当箇所", "競馬場", "レース", "ウマ娘血統", "race_id"]
     existing = sheet.get_all_records()
 
-    # すでに同じrace_id＋bloodlineの該当が存在すればスキップ
-    for r in existing:
-        if str(r.get("race_id", "")) == str(race_id) and str(r.get("ウマ娘血統", "")) == str(bloodline):
-            return  # スキップ
+    # === 🧹 同じ race_id の行をすべて削除（race_id 一致のみでOK）===
+    delete_indices = []
+    for i, r in enumerate(existing):
+        if str(r.get("race_id", "")) == str(race_id):
+            delete_indices.append(i + 2)  # +2 はヘッダ行と1-index対策
 
+    if delete_indices:
+        for i in sorted(delete_indices, reverse=True):
+            sheet.delete_rows(i)
+        time.sleep(1.2)  # 削除後に一呼吸（API制限対策）
+
+    # === 📝 データを書き込み ===
     if not rows:
         dummy = {
             "馬名": "（該当なし）",
@@ -86,7 +93,7 @@ def save_cached_result(rows, race_id=None, bloodline=None):
         values = [[row.get(h, "") for h in headers] for row in rows]
         sheet.append_rows(values)
 
-    time.sleep(1.2)  # API連続制限回避
+    time.sleep(1.2)
 
 # === 血統位置ラベル ===
 def generate_position_labels():
