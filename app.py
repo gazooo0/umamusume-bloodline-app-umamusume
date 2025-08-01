@@ -192,31 +192,41 @@ if st.button("🔍 該当馬を検索"):
                     overall_progress.progress(min(all_race_counter / total_races, 1.0))
                     continue
 
-            horse_links = get_horse_links(race_id)
-            race_results = []
+        horse_links = get_horse_links(race_id)
+        race_results = []
 
-            for i, (name, link) in enumerate(horse_links.items(), 1):
-                status_text.text(f"検索中…{row['競馬場']}{race_num}R {i}/{len(horse_links)}頭目")
-                try:
-                    pedigree = get_pedigree_with_positions(link)
-                    matched = match_pedigree(pedigree, target_kettou)
-                    if matched:
-                        race_results.append({
-                            "馬名": name,
-                            "該当箇所": "、".join(matched),
-                            "競馬場": row["競馬場"],
-                            "レース": f"{race_num}R",
-                            "ウマ娘血統": target_kettou,
-                            "race_id": race_id
-                        })
-                except Exception as e:
-                    st.error(f"{name} の照合エラー：{e}")
-                time.sleep(0.3)
+        for i, (name, link) in enumerate(horse_links.items(), 1):
+            status_text.text(f"検索中…{row['競馬場']}{race_num}R {i}/{len(horse_links)}頭目")
+            try:
+                pedigree = get_pedigree_with_positions(link)
+                matched = match_pedigree(pedigree, target_kettou)
+                if matched:
+                    race_results.append({
+                        "馬名": name,
+                        "該当箇所": "、".join(matched),
+                        "競馬場": row["競馬場"],
+                        "レース": f"{race_num}R",
+                        "ウマ娘血統": target_kettou,
+                        "race_id": race_id
+                    })
+            except Exception as e:
+                st.error(f"{name} の照合エラー：{e}")
+            time.sleep(0.3)
 
-            if race_results:
+        if race_results:
             df = pd.DataFrame(race_results)
             df_show = df[["馬名", "該当箇所", "競馬場", "レース"]]  # 表示用（4列）
             html = render_table_html(df_show)
+
+            st.markdown(f"#### 🎯 {row['競馬場']} {race_num}R 該当馬", unsafe_allow_html=True)
+            st.markdown(html, unsafe_allow_html=True)
+
+            save_cached_result(race_results)
+
+    st.markdown(f"#### 🎯 {row['競馬場']} {race_num}R 該当馬", unsafe_allow_html=True)
+    st.markdown(html, unsafe_allow_html=True)
+
+    save_cached_result(race_results)  # 保存にはウマ娘血統・race_idを含むデータ
 
     st.markdown(f"#### 🎯 {row['競馬場']} {race_num}R 該当馬", unsafe_allow_html=True)
     st.markdown(html, unsafe_allow_html=True)
