@@ -181,6 +181,7 @@ overall_progress = st.progress(0)
 
 if st.button("🔍 該当馬を検索"):
     all_results = []
+    full_cache = load_entire_cache()  # 🔁 1回だけ読み込んで共有
 
     for _, row in selected_rows.iterrows():
         year = row["年"]
@@ -198,8 +199,9 @@ if st.button("🔍 該当馬を検索"):
         for nn in range(1, 13):  # 1R〜12R
             race_id = f"{year}{jj}{kk}{dd}{nn:02d}"
 
+            # キャッシュ確認
             if use_cache:
-                cached = load_cached_result(race_id, target_kettou)
+                cached = load_cached_result(race_id, target_kettou, full_cache=full_cache)
                 if cached == "該当なし":
                     place_race_counter += 1
                     all_race_counter += 1
@@ -215,6 +217,7 @@ if st.button("🔍 該当馬を検索"):
                     overall_progress.progress(min(all_race_counter / total_races, 1.0))
                     continue
 
+            # スクレイピング実行
             horse_links = get_horse_links(race_id)
             race_results = []
 
@@ -237,12 +240,10 @@ if st.button("🔍 該当馬を検索"):
                     st.error(f"{name} の照合エラー：{e}")
                 time.sleep(0.3)
 
-            if race_results:
-                save_cached_result(race_results)
-                place_results.extend(race_results)
-                all_results.extend(race_results)
-            else:
-                save_cached_result([], race_id=race_id, bloodline=target_kettou)
+            # 結果保存＋進捗更新
+            save_cached_result(race_results, race_id=race_id, bloodline=target_kettou)
+            place_results.extend(race_results)
+            all_results.extend(race_results)
 
             place_race_counter += 1
             all_race_counter += 1
