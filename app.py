@@ -102,9 +102,10 @@ def match_pedigree(pedigree_dict, target_name):
             matched_positions.append(pos)
     return matched_positions
 
-# === HTMLテーブル変換 ===
+# === HTMLテーブル変換（表示項目を制限） ===
 def render_table_html(df):
-    df.insert(0, "No", range(1, len(df) + 1))
+    df = df[["馬名", "該当箇所", "競馬場", "レース"]]  # 表示用に列を限定
+    df.insert(0, "No", range(1, len(df) + 1))  # No列追加
     table_html = "<table border='1' style='border-collapse:collapse; width:100%; font-size:16px;'>"
     table_html += "<thead><tr>" + "".join([f"<th>{col}</th>" for col in df.columns]) + "</tr></thead><tbody>"
     for _, row in df.iterrows():
