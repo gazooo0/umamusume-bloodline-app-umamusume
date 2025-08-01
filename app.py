@@ -49,9 +49,9 @@ def load_cached_result(race_id, bloodline):
 
 def save_cached_result(rows):
     sheet = connect_to_gspread()
-    existing = sheet.get_all_values()
-    headers = existing[0] if existing else ["馬名", "該当箇所", "競馬場", "レース", "ウマ娘血統", "race_id"]
-    sheet.append_rows([list(row.values()) for row in rows])
+    headers = ["馬名", "該当箇所", "競馬場", "レース", "ウマ娘血統", "race_id"]
+    values = [[row.get(h, "") for h in headers] for row in rows]
+    sheet.append_rows(values)
 
 # === 血統位置ラベル ===
 def generate_position_labels():
@@ -214,8 +214,14 @@ if st.button("🔍 該当馬を検索"):
                 time.sleep(0.3)
 
             if race_results:
-                place_results.extend(race_results)
-                save_cached_result(race_results)
+            df = pd.DataFrame(race_results)
+            df_show = df[["馬名", "該当箇所", "競馬場", "レース"]]  # 表示用（4列）
+            html = render_table_html(df_show)
+
+    st.markdown(f"#### 🎯 {row['競馬場']} {race_num}R 該当馬", unsafe_allow_html=True)
+    st.markdown(html, unsafe_allow_html=True)
+
+    save_cached_result(race_results)  # 保存にはウマ娘血統・race_idを含むデータ
 
             all_race_counter += 1
             place_race_counter += 1
