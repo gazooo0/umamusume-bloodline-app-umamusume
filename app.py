@@ -9,7 +9,7 @@ import json
 import os
 from oauth2client.service_account import ServiceAccountCredentials
 
-# === 定数設定 ===
+# === 定数設定 ====
 HEADERS = {"User-Agent": "Mozilla/5.0"}
 SPREADSHEET_ID = "1wMkpbOvqveVBkJSR85mpZcnKThYSEmusmsl710SaRKw"
 SHEET_NAME = "cache_UMA"
