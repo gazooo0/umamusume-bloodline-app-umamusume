@@ -163,6 +163,7 @@ if st.button("🔍 該当馬を検索"):
         place_race_counter = 0
 
         all_results = []
+        place_results = []  # ← 競馬場ごとの結果をここにまとめる
 
         for race_num in range(1, 13):
             race_id = f"{year}{jj}{kk}{dd}{race_num:02d}"
@@ -171,9 +172,7 @@ if st.button("🔍 該当馬を検索"):
             if use_cache:
                 cached = load_cached_result(race_id, target_kettou)
                 if cached:
-                    df = pd.DataFrame(cached)
-                    html = render_table_html(df)
-                    st.markdown(html, unsafe_allow_html=True)
+                    place_results.extend(cached)
                     all_race_counter += 1
                     place_race_counter += 1
                     place_progress.progress(min(place_race_counter / 12, 1.0))
@@ -202,9 +201,7 @@ if st.button("🔍 該当馬を検索"):
                 time.sleep(0.3)
 
             if race_results:
-                df = pd.DataFrame(race_results)
-                html = render_table_html(df)
-                st.markdown(html, unsafe_allow_html=True)
+                place_results.extend(race_results)
                 save_cached_result(race_results)
 
             all_race_counter += 1
@@ -213,3 +210,10 @@ if st.button("🔍 該当馬を検索"):
             overall_progress.progress(min(all_race_counter / total_races, 1.0))
 
         place_status.markdown(f"### ✅ {row['競馬場']} 競馬場の出走馬の抽出完了")
+
+        # === 競馬場ごとに一括表示 ===
+        if place_results:
+            st.markdown(f"### 🏇 {row['競馬場']} 競馬場の該当馬一覧")
+            df = pd.DataFrame(place_results)
+            html = render_table_html(df)
+            st.markdown(html, unsafe_allow_html=True)
