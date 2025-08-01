@@ -38,16 +38,20 @@ def load_entire_cache():
 # === キャッシュ検索（既存関数を修正） ===
 def load_cached_result(race_id, bloodline, full_cache=None):
     if full_cache is None:
-        sheet = connect_to_gspread()
-        full_cache = sheet.get_all_records()
+        full_cache = load_entire_cache()
 
+    matched_rows = [r for r in full_cache if str(r.get("race_id", "")) == str(race_id) and str(r.get("ウマ娘血統", "")) == str(bloodline)]
+
+    if not matched_rows:
+        return []  # キャッシュ無し
+
+    if len(matched_rows) == 1 and matched_rows[0].get("該当箇所", "") == "該当なし":
+        return "該当なし"  # 明確な該当なし
+
+    # それ以外は通常処理
     results = []
-    for r in full_cache:
-        race_id_match = str(r.get("race_id", "")).strip() == str(race_id).strip()
-        bloodline_match = str(r.get("ウマ娘血統", "")).strip() == str(bloodline).strip()
-        if race_id_match and bloodline_match:
-            if r.get("該当箇所", "") == "該当なし":
-                return "該当なし"
+    for r in matched_rows:
+        if r.get("該当箇所", "") != "該当なし":
             filtered = {
                 "馬名": r.get("馬名", ""),
                 "該当箇所": r.get("該当箇所", ""),
