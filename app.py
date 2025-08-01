@@ -45,8 +45,9 @@ def load_cached_result(race_id, bloodline, full_cache=None):
     if not matched_rows:
         return []  # キャッシュ無し
 
-    if len(matched_rows) == 1 and matched_rows[0].get("該当箇所", "") == "該当なし":
-        return "該当なし"  # 明確な該当なし
+    # ✅ 一致する全ての行が「該当なし」なら該当なしとみなす（複数行あってもOK）
+    if all(r.get("該当箇所", "") == "該当なし" for r in matched_rows):
+        return "該当なし"
 
     # それ以外は通常処理
     results = []
