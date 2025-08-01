@@ -176,10 +176,12 @@ future_7 = today + pd.Timedelta(days=7)
 schedule_df = schedule_df[schedule_df["日付"].between(past_31, future_7)]
 
 available_dates = sorted(schedule_df["日付"].dt.strftime("%Y-%m-%d").unique(), reverse=True)
-selected_date = st.selectbox("📅 開催日を選択", available_dates)
+st.markdown("### 📅 開催日を選択")
+selected_date = st.selectbox("", available_dates)
 
 # ウマ娘選択
-selected_umamusume = st.selectbox("👧 ウマ娘を選択", sorted(umamusume_df["kettou"]))
+st.markdown("### 👧 ウマ娘を選択")
+selected_umamusume = st.selectbox("", sorted(umamusume_df["kettou"]))
 st.markdown("""
 <div style='line-height: 1.5; font-size: 0,8em; color: gray;'>
 あいうえお順に並んでいます。</div>
