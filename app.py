@@ -180,12 +180,23 @@ selected_date = st.selectbox("📅 開催日を選択", available_dates)
 
 # ウマ娘選択
 selected_umamusume = st.selectbox("👧 ウマ娘を選択", sorted(umamusume_df["kettou"]))
+st.markdown("""
+<div style='line-height: 1.5; font-size: 0,8em; color: gray;'>
+あいうえお順に並んでいます。</div>
+""", unsafe_allow_html=True)
 target_kettou = name_to_kettou.get(selected_umamusume, "")
 st.image(image_dict.get(selected_umamusume, ""), width=150)
 st.markdown(f"選択したウマ娘：**{target_kettou}**")
 
 # キャッシュ利用切替
 use_cache = st.radio("キャッシュ利用", ["キャッシュを使う", "再取得する"]) == "キャッシュを使う"
+st.markdown("""
+<div style='line-height: 1.5; font-size: 0,8em; color: gray;'>
+キャッシュ（検索結果の一時データ）があれば、結果をすぐに表示できます。<br>基本的に「キャッシュを使う」を選択してください。<br><br>
+「キャッシュを使う」を選択した場合でも、キャッシュデータがないは自動で情報取得が始まります。<br><br>
+キャッシュがない場合、情報取得に数十秒～数分時間がかかりますのでお待ちください。<br>
+</div>
+""", unsafe_allow_html=True)
 
 # 検索実行
 selected_date_obj = pd.to_datetime(selected_date)
@@ -198,7 +209,7 @@ total_races = len(selected_rows) * 12
 all_race_counter = 0
 overall_progress = st.progress(0)
 
-if st.button("🔍 該当馬を検索"):
+if st.button("🔍 ウマ娘血統サーチ開始！"):
     all_results = []
     full_cache = load_entire_cache()  # 🔁 1回だけ読み込んで共有
 
