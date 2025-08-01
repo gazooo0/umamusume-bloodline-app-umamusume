@@ -176,42 +176,47 @@ if st.button("🔍 該当馬を検索"):
         place_race_counter = 0
 
         all_results = []
-        place_results = []  # ← 競馬場ごとの結果をここにまとめる
 
-        for race_num in range(1, 13):
-            race_id = f"{year}{jj}{kk}{dd}{race_num:02d}"
+for race_id in target_race_ids:
+    race_num = int(str(race_id)[-2:])
+    place = race_id_to_place.get(race_id[:6], "不明")
+    status_text.text(f"{place} 競馬場の出走馬の処理中...")
 
-            # キャッシュ確認
-            if use_cache:
-                cached = load_cached_result(race_id, target_kettou)
-                if cached:
-                    place_results.extend(cached)
-                    all_race_counter += 1
-                    place_race_counter += 1
-                    place_progress.progress(min(place_race_counter / 12, 1.0))
-                    overall_progress.progress(min(all_race_counter / total_races, 1.0))
-                    continue
+    # キャッシュ確認
+    if cache_mode == "キャッシュを使用する":
+        cached = load_cached_result(race_id, target_kettou)
+        if cached:
+            all_results.extend(cached)
+            continue
 
-            horse_links = get_horse_links(race_id)
-            race_results = []
+    horse_links = get_horse_links(race_id)
+    race_results = []
 
-            for i, (name, link) in enumerate(horse_links.items(), 1):
-                status_text.text(f"検索中…{row['競馬場']}{race_num}R {i}/{len(horse_links)}頭目")
-                try:
-                    pedigree = get_pedigree_with_positions(link)
-                    matched = match_pedigree(pedigree, target_kettou)
-                    if matched:
-                        race_results.append({
-                            "馬名": name,
-                            "該当箇所": "、".join(matched),
-                            "競馬場": row["競馬場"],
-                            "レース": f"{race_num}R",
-                            "ウマ娘血統": target_kettou,
-                            "race_id": race_id
-                        })
-                except Exception as e:
-                    st.error(f"{name} の照合エラー：{e}")
-                time.sleep(0.3)
+    for i, (name, link) in enumerate(horse_links.items(), 1):
+        status_text.text(f"検索中…{place} {race_num}R {i}/{len(horse_links)}頭目")
+        try:
+            pedigree = get_pedigree_with_positions(link)
+            matched = match_pedigree(pedigree, target_kettou)
+            if matched:
+                race_results.append({
+                    "馬名": name,
+                    "該当箇所": "、".join(matched),
+                    "競馬場": place,
+                    "レース": f"{race_num}R",
+                    "ウマ娘血統": target_kettou,
+                    "race_id": race_id,
+                })
+        except Exception as e:
+            st.error(f"{name} の照合エラー：{e}")
+        time.sleep(0.3)
+
+    all_results.extend(race_results)
+
+# === 全レース処理後に表示・キャッシュ ===
+if all_results:
+    display_results_grouped_by_place(all_results)
+    if cache_mode != "キャッシュを使用する":
+        save_cached_result(all_results)
 
             if race_results:
                 df = pd.DataFrame(race_results)
