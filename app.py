@@ -218,16 +218,16 @@ if all_results:
     if cache_mode != "キャッシュを使用する":
         save_cached_result(all_results)
 
-            if race_results:
-                df = pd.DataFrame(race_results)
-                df_show = df[["馬名", "該当箇所", "競馬場", "レース"]]  # 表示用（4列）
-                html = render_table_html(df_show)
+        if race_results:
+            df = pd.DataFrame(race_results)
+            df_show = df[["馬名", "該当箇所", "競馬場", "レース"]]  # 表示用（4列）
+            html = render_table_html(df_show)
 
-                st.markdown(f"#### 🎯 {row['競馬場']} {race_num}R 該当馬", unsafe_allow_html=True)
-                st.markdown(html, unsafe_allow_html=True)
+            st.markdown(f"#### 🎯 {row['競馬場']} {race_num}R 該当馬", unsafe_allow_html=True)
+            st.markdown(html, unsafe_allow_html=True)
 
-                save_cached_result(race_results)
-                place_results.extend(race_results)
+            save_cached_result(race_results)
+            place_results.extend(race_results)
 
             all_race_counter += 1
             place_race_counter += 1
