@@ -1,0 +1,30 @@
+name: Clear Google Sheets Cache
+
+on:
+  schedule:
+    - cron: '0 11 * * 4'   # 木曜20:00 JST → 11:00 UTC
+    - cron: '0 3 * * 5'    # 金曜12:00 JST → 3:00 UTC
+    - cron: '0 3 * * 6'    # 土曜12:00 JST → 3:00 UTC
+    - cron: '0 3 * * 0'    # 日曜12:00 JST → 3:00 UTC
+
+jobs:
+  clear-cache:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Run cache clear script
+        env:
+          GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
+        run: |
+          python clear_cache.py
