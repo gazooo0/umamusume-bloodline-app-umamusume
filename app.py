@@ -185,7 +185,12 @@ schedule_df = schedule_df[schedule_df["日付"].between(past_31, future_7)]
 
 available_dates = sorted(schedule_df["日付"].dt.strftime("%Y-%m-%d").unique(), reverse=True)
 st.markdown("### 📅 開催日を選択")
+st.markdown("""
+<div style='line-height: 1.5; font-size: 0,8em; color: gray;'>
+競馬開催日の場合、未来日が表示される可能性があるためご注意ください。</div>
+""", unsafe_allow_html=True)
 selected_date = st.selectbox("", available_dates)
+
 
 # ウマ娘選択
 st.markdown("### 👧 ウマ娘を選択")
@@ -295,5 +300,6 @@ if st.button("🔍 ウマ娘血統サーチ開始！"):
             st.markdown(f"### ✅ {place} 競馬場の該当馬一覧")
             df = pd.DataFrame(place_results)
             st.markdown(render_table_html(df), unsafe_allow_html=True)
+
 
 
