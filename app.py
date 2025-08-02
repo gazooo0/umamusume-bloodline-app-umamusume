@@ -14,7 +14,7 @@ HEADERS = {"User-Agent": "Mozilla/5.0"}
 SPREADSHEET_ID = "1wMkpbOvqveVBkJSR85mpZcnKThYSEmusmsl710SaRKw"
 SHEET_NAME = "cache_UMA"
 
-# === Google Sheets 接続 ===
+# === Google Sheets 接続 ====
 def connect_to_gspread():
     scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
     json_str = os.environ.get("GOOGLE_CREDENTIALS_JSON")
@@ -295,4 +295,5 @@ if st.button("🔍 ウマ娘血統サーチ開始！"):
             st.markdown(f"### ✅ {place} 競馬場の該当馬一覧")
             df = pd.DataFrame(place_results)
             st.markdown(render_table_html(df), unsafe_allow_html=True)
+
 
