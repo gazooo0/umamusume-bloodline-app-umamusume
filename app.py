@@ -40,27 +40,66 @@ def load_cached_result(race_id, bloodline, full_cache=None):
     if full_cache is None:
         full_cache = load_entire_cache()
 
-    matched_rows = [r for r in full_cache if str(r.get("race_id", "")) == str(race_id) and str(r.get("ウマ娘血統", "")) == str(bloodline)]
+    matched_rows = [
+        r for r in full_cache
+        if str(r.get("race_id", "")) == str(race_id)
+        and str(r.get("ウマ娘血統", "")) == str(bloodline)
+    ]
 
     if not matched_rows:
         return []  # キャッシュ無し
 
-    # ✅ 一致する全ての行が「該当なし」なら該当なしとみなす（複数行あってもOK）
-    if all(r.get("該当箇所", "") == "該当なし" for r in matched_rows):
+    # ✅ 一致する全ての行が「該当なし」なら該当なしとみなす（空文字も含む）
+    if all("該当なし" in str(r.get("該当箇所", "")) for r in matched_rows):
         return "該当なし"
 
     # それ以外は通常処理
     results = []
     for r in matched_rows:
-        if r.get("該当箇所", "") != "該当なし":
-            filtered = {
+        if "該当なし" not in str(r.get("該当箇所", "")):
+            results.append({
                 "馬名": r.get("馬名", ""),
                 "該当箇所": r.get("該当箇所", ""),
                 "競馬場": r.get("競馬場", ""),
                 "レース": r.get("レース", "")
-            }
-            results.append(filtered)
+            })
     return results
+
+
+# === キャッシュ保存（重複チェック付き） ===
+def save_cached_result(rows, race_id=None, bloodline=None):
+    sheet = connect_to_gspread()
+    headers = ["馬名", "該当箇所", "競馬場", "レース", "ウマ娘血統", "race_id"]
+    existing = sheet.get_all_records()
+
+    # === 🧹 race_id と 血統が両方一致する行だけ削除 ===
+    delete_indices = []
+    for i, r in enumerate(existing):
+        if str(r.get("race_id", "")) == str(race_id) and str(r.get("ウマ娘血統", "")) == str(bloodline):
+            delete_indices.append(i + 2)  # +2 はヘッダ行 + 1-index
+
+    if delete_indices:
+        for i in sorted(delete_indices, reverse=True):
+            sheet.delete_rows(i)
+        time.sleep(1.2)
+
+    # === 保存処理（該当なし対応）
+    if rows == "該当なし":
+        # 該当なし行として保存
+        row = {
+            "馬名": "",
+            "該当箇所": "該当なし",
+            "競馬場": "",
+            "レース": "",
+            "ウマ娘血統": bloodline,
+            "race_id": race_id
+        }
+        sheet.append_row([row.get(h, "") for h in headers])
+    elif isinstance(rows, list):
+        for r in rows:
+            r["ウマ娘血統"] = bloodline
+            r["race_id"] = race_id
+            sheet.append_row([r.get(h, "") for h in headers])
 
 # === キャッシュ保存（重複チェック付き） ===
 def save_cached_result(rows, race_id=None, bloodline=None):
@@ -295,3 +334,4 @@ if st.button("🔍 ウマ娘血統サーチ開始！"):
             st.markdown(f"### ✅ {place} 競馬場の該当馬一覧")
             df = pd.DataFrame(place_results)
             st.markdown(render_table_html(df), unsafe_allow_html=True)
+
